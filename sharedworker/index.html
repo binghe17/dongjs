@@ -1,0 +1,15 @@
+<!DOCTYPE html> <html> <head> <title>SharedWorker</title> </head> <body> </body> </html>
+<script src="index.js"></script>
+<script>
+function chat(id, msg) {
+	port.postMessage({id, msg})
+}
+
+function broadcast(msg){
+	chat('broadcast', msg)
+}
+</script>
+<!--
+new SharedWorker(url,opt)时， 必须在<script src>外部js文件中使用。
+在chrome中，打开多个页面后关闭chrome程序，再启动chrome时，之前浏览过的多个页面自动打开，却不会正常运行sharedWorker。
+-->
