@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>hotkeys</title>
+	<script src="https://unpkg.com/hotkeys-js/dist/hotkeys.min.js"></script>
+</head>
+<body>
+	
+</body>
+</html>
+
+<script type="text/javascript">
+hotkeys('ctrl+w,d', function(event,handler) {
+	event.preventDefault()
+  switch(handler.key){
+    case "CTRL+A":console.warn('you pressed ctrl+a!');break;
+    case "ctrl+b":console.warn('you pressed ctrl+b!');break;
+    case "ctrl+r":console.warn('you pressed r!');break;
+    case "ctrl+d":console.warn('you pressed f!');break;
+  }
+
+  console.log(event, handler)
+});
+</script>
