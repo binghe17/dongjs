@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>make202005</title>
+	<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/interactjs@1.9.14/dist/interact.min.js"></script> -->
+	<style>
+		#wrapper div { border:1px solid #ccc;}
+		#scrollHideDemo {
+			height: 500px;
+			width: 300px;
+			overflow: auto;
+		}
+		#scrollHideDemo > div { height:100px;}
+		.listenScrollingForDisplay { background:red;}
+		.resize, .drag {width: 200px;height:200px;}
+		/* .resizable{resize:both;overflow:auto;} */
+
+
+
+
+	</style>
+</head>
+<body>
+	<div id="wrapper">
+		<div id="scrollHideDemo">
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div class="listenScrollingForDisplay">11111</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div class="listenScrollingForDisplay">3333</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+			<div>22222</div>
+		</div>
+		<div class="resize resizable">resize1</div>
+		<div class="resize">resize2</div>
+		<div class="drag">drag1</div>
+		<div class="drag">drag2</div>
+	</div>
+
+
+	<script>
+
+		//--------------1,2 is toDecimal(), toIp()   =====> ip2int(), int2ip();
+		function ip2int(ip) {
+			return ip.split('.').reduce(function (ipInt, octet) { return (ipInt << 8) + parseInt(octet, 10) }, 0) >>> 0;
+		}
+		function int2ip(ipInt) {
+			return ((ipInt >>> 24) + '.' + (ipInt >> 16 & 255) + '.' + (ipInt >> 8 & 255) + '.' + (ipInt & 255));
+		}
+		// console.log(ip2int('192.168.1.127')); // 3232235903 
+		// console.log(int2ip('3232235903')); //192.168.1.127
+
+
+		//--------------3 listen(); =====> ShowItem()
+		class ShowItem {
+			constructor(child, callback) {
+				console.log('init', child)
+				this._isListenScroll = false;
+				this._isStartObServer = false;
+				this._callback = callback;//보여지거나 감춰질떄 실행하는 콜백 함수 _callback저장
+				this.target = child;
+				if ( "IntersectionObserver" in window && "IntersectionObserverEntry" in window && "intersectionRatio" in window.IntersectionObserverEntry.prototype ) {}
+				else console.log('Use Chrome Browser!');
+				this._observer = new IntersectionObserver(entries => {
+					entries.forEach(entry => {//보이거나 감춰질때 실행
+						if(this._isStartObServer == false){
+							this._isStartObServer = true;
+						}else{
+							this.target = entry.target;
+							this.isShow = entry.isIntersecting;
+							this.entry = entry;
+							this._callback(this.isShow, this.target);
+						}
+					});
+				}, {});
+			}
+
+			start() {
+				if (this._isListenScroll == false) {//꺼졌을때 켜기
+					// console.log('start', this.target, this._callback)
+					this._observer.observe(this.target);
+					this._isListenScroll = true;
+				}else{
+					console.log('started')
+				}
+			}
+
+			stop() {
+				if(this._isListenScroll == true) {//켜졌을떄 끌수 있음 
+					console.log('stop')
+					this._observer.unobserve(this.target);
+					this._observer.disconnect();
+					this._isListenScroll = false; 
+					this._isStartObServer = false;
+				}else {
+					console.log('stoped')
+				}
+			}
+		} 
+		//참고 http://blog.hyeyoonjung.com/2019/01/09/intersectionobserver-tutorial/
+		//참고 https://www.imqianduan.com/javascript/IntersectionObserver.html
+
+		//--test showItem
+		// let target = document.querySelectorAll('.listenScrollingForDisplay')
+		// let control = new ShowItem(target[0], function(status, target){
+		// 	console.log(1111, status, target); //나타났을 때 true, 없어졌을 때 false
+		// });
+		// // control.start();//감시 시작
+		// // control.stop();//감시 중지
+
+		// let control2 = new ShowItem(target[1], function(status, target){
+		// 	console.log(2222, status, target); //나타났을 때 true, 없어졌을 때 false
+		// });
+		// // control2.start();//감시 시작
+		// // control2.stop();//감시 중지
+
+		//------------4
+
+
+
+
+
+
+
+
+
+		//------------5 MouseResize  ====> Resizable()
+		//css로 resize하기  https://www.w3schools.com/cssref/playit.asp?filename=playcss_resize&preval=both
+			// .resizable{resize:both;overflow:auto;} 
+			// document.getElementById("myDIV").style.resize = "both";
+		//참고 https://medium.com/the-z/making-a-resizable-div-in-js-is-not-easy-as-you-think-bda19a1bc53d
+
+		// //한 개의 div의 크기를 마우스로 조절할 수 있는 기능
+		class Resizable {
+			constructor(target) {
+				console.log('init resize', target)
+				this._isStart = false;
+				this.target = target;
+				this._css_resize = target.style.resize;
+				this._css_overflow = target.style.overflow;
+				// console.log(this._css_resize  =='', this._css_overflow=='')
+			}
+
+			start() {
+				if (this._isStart == false) {//꺼졌을때 켜기
+					console.log('start resize')
+					this.target.style.resize = "both";
+					this.target.style.overflow = "auto";
+					this._isStart = true;
+				}else{
+					console.log('started')
+				}
+			}
+
+			stop() {
+				if(this._isStart == true) {//켜졌을떄 끌수 있음 
+					console.log('stop resize')
+					this.target.style.resize = (this._css_resize  =='') ?  'unset' : this._css_resize; //원래 스타일 없을때 ? 삭제 : 원상복구
+					this.target.style.overflow = (this._css_overflow == '') ? 'unset' :  this._css_overflow; //원래 스타일 없을때 ? 삭제 : 원상복구
+					this._isStart = false; 
+				}else {
+					console.log('stoped')
+				}
+			}
+		} 
+		
+		let resize = new Resizable(document.querySelector('.resize'))
+		resize.start();
+		// resize.stop();
+
+
+
+	
+		//------------6 drag() =====> Sortable()
+		//https://interactjs.io/
+		
+
+		// //한 개의 div를 drag하고 drop하는 기능 
+		// class Drag {
+		// 	constructor(target) {
+		// 		console.log('init', child)
+		// 		this._isStart = false;
+		// 		this.target = target;
+				
+
+
+		// 	}
+
+		// 	start() {
+		// 		if (this._isStart == false) {//꺼졌을때 켜기
+		// 			console.log('start')
+					
+		// 			this._isStart = true;
+		// 		}else{
+		// 			console.log('started')
+		// 		}
+		// 	}
+
+		// 	stop() {
+		// 		if(this._isStart == true) {//켜졌을떄 끌수 있음 
+		// 			console.log('stop')
+
+		// 			this._isStart = false; 
+		// 		}else {
+		// 			console.log('stoped')
+		// 		}
+		// 	}
+		// } 
+		
+		// let drag1 = new Drag(document.querySelector('.drag'))
+		// drag1.start();
+		// // drag1.stop();
+
+
+
+	</script>
+
+
+
+
+
+
+
+
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.10.2/Sortable.min.js"></script>
+<div id="example1" >
+	<div>Item 1</div>
+	<div>Item 2</div>
+	<div>Item 3</div>
+	<div>Item 4</div>
+	<div>Item 5</div>
+	<div>Item 6</div>
+</div>
+<style>
+	#example1 > div {border: 1px solid #ccc; padding: 10px;}
+</style>
+<script>
+	// https://github.com/SortableJS/Sortable
+	let sort1 = new Sortable(document.querySelector('#example1'), {
+		animation: 150,
+		// ghostClass: 'blue-background-class'
+	});
+	
+	//sort1.destroy()
+</script>
+
+
+
+
+
+
+
+<div class="resize-drag">Resize from any edge or corner</div>
+<style>
+.resize-drag{background-color:#29e;color:white;font-size:20px;font-family:sans-serif;border-radius:8px;padding:20px;touch-action:none;width:120px; box-sizing:border-box;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script>
+	//https://interactjs.io/ 
+	//리사이즈 
+	let resize1 = interact('.resize-drag')
+	.resizable({
+		// resize from all edges and corners
+		edges: { left: true, right: true, bottom: true, top: true },
+	
+		listeners: {
+		move (event) {
+			var target = event.target
+			var x = (parseFloat(target.getAttribute('data-x')) || 0)
+			var y = (parseFloat(target.getAttribute('data-y')) || 0)
+	
+			// update the element's style
+			target.style.width = event.rect.width + 'px'
+			target.style.height = event.rect.height + 'px'
+	
+			// translate when resizing from top or left edges
+			x += event.deltaRect.left
+			y += event.deltaRect.top
+	
+			target.style.webkitTransform = target.style.transform =
+			'translate(' + x + 'px,' + y + 'px)'
+	
+			target.setAttribute('data-x', x)
+			target.setAttribute('data-y', y)
+			target.textContent = Math.round(event.rect.width) + '\u00D7' + Math.round(event.rect.height)
+		}
+		},
+		modifiers: [
+		// keep the edges inside the parent
+		interact.modifiers.restrictEdges({
+			outer: 'parent'
+		}),
+	
+		// minimum size
+		interact.modifiers.restrictSize({
+			min: { width: 100, height: 50 }
+		})
+		],
+	
+		inertia: true
+	})
+
+	//드래그 
+	let drag1 = interact('.resize-drag, .drag')
+	.draggable({
+		listeners: { move: window.dragMoveListener },
+		inertia: true,
+		modifiers: [
+			interact.modifiers.restrictRect({
+				restriction: 'parent',
+				endOnly: true
+			})
+		]
+	})
+
+	function dragMoveListener (event) {
+		var target = event.target
+		// keep the dragged position in the data-x/data-y attributes
+		var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
+		var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
+
+		// translate the element
+		target.style.webkitTransform =
+			target.style.transform =
+			'translate(' + x + 'px, ' + y + 'px)'
+
+		// update the posiion attributes
+		target.setAttribute('data-x', x)
+		target.setAttribute('data-y', y)
+	}
+
+
+	//resize1.unset()
+	//drag1.unset()
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 기타
+
+<style>
+
+	.item {width:50px; height:50px; position: absolute; background: orange;}
+	.resizer {position: absolute; width: 10px;height: 10px; border-radius: 5px;background:black;z-index: 2;}
+	.resizer.nw {top:-1px; left:-1px; cursor:nw-resize}
+	.resizer.ne {top:-1px; right: -1px; cursor:ne-resize;}
+	.resizer.sw {bottom:-1px; left: -1px; cursor:sw-resize;}
+	.resizer.se {bottom:-1px; right: -1px; cursor:se-resize;}
+
+</style>
+
+<div class="item">
+	<div class="resizer ne"></div>
+	<div class="resizer nw"></div>
+	<div class="resizer sw"></div>
+	<div class="resizer se"></div>
+
+</div>
+<script>
+	//모바일에서 터치 안됨. pc에서만 됨. 
+
+	const el = document.querySelector(".item");
+	let isResizing = false;
+	
+	//이동  
+	el.addEventListener("mousedown", mousedown);
+	
+	function mousedown(e) {
+	  window.addEventListener("mousemove", mousemove);
+	  window.addEventListener("mouseup", mouseup);
+	
+	  let prevX = e.clientX;
+	  let prevY = e.clientY;
+	
+	  function mousemove(e) {
+		if (!isResizing) {
+		  let newX = prevX - e.clientX;
+		  let newY = prevY - e.clientY;
+	
+		  const rect = el.getBoundingClientRect();
+	
+		  el.style.left = rect.left - newX + "px";
+		  el.style.top = rect.top - newY + "px";
+	
+		  prevX = e.clientX;
+		  prevY = e.clientY;
+		}
+	  }
+	
+	  function mouseup() {
+		window.removeEventListener("mousemove", mousemove);
+		window.removeEventListener("mouseup", mouseup);
+	  }
+	}
+	
+	//모서리 리사이즈
+	const resizers = document.querySelectorAll(".resizer");
+	let currentResizer;
+	
+	for (let resizer of resizers) {
+	  resizer.addEventListener("mousedown", mousedown);
+	
+	  function mousedown(e) {
+		currentResizer = e.target;
+		isResizing = true;
+	
+		let prevX = e.clientX;
+		let prevY = e.clientY;
+	
+		window.addEventListener("mousemove", mousemove);
+		window.addEventListener("mouseup", mouseup);
+	
+		function mousemove(e) {
+		  const rect = el.getBoundingClientRect();
+	
+		  if (currentResizer.classList.contains("se")) {
+			el.style.width = rect.width - (prevX - e.clientX) + "px";
+			el.style.height = rect.height - (prevY - e.clientY) + "px";
+		  } else if (currentResizer.classList.contains("sw")) {
+			el.style.width = rect.width + (prevX - e.clientX) + "px";
+			el.style.height = rect.height - (prevY - e.clientY) + "px";
+			el.style.left = rect.left - (prevX - e.clientX) + "px";
+		  } else if (currentResizer.classList.contains("ne")) {
+			el.style.width = rect.width - (prevX - e.clientX) + "px";
+			el.style.height = rect.height + (prevY - e.clientY) + "px";
+			el.style.top = rect.top - (prevY - e.clientY) + "px";
+		  } else {
+			el.style.width = rect.width + (prevX - e.clientX) + "px";
+			el.style.height = rect.height + (prevY - e.clientY) + "px";
+			el.style.top = rect.top - (prevY - e.clientY) + "px";
+			el.style.left = rect.left - (prevX - e.clientX) + "px";
+		  }
+	
+		  prevX = e.clientX;
+		  prevY = e.clientY;
+		}
+	
+		function mouseup() {
+		  window.removeEventListener("mousemove", mousemove);
+		  window.removeEventListener("mouseup", mouseup);
+		  isResizing = false;
+		}
+	  }
+	}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="popup">
+	<div class="popup-header">Click here to move</div>
+	<p>Move</p>
+	<p>this</p>
+	<p>DIV</p>
+</div>
+
+<div class="popup">
+	<div class="popup-header noselect">Click here to move</div>
+	<p>Move</p>
+	<p>this</p>
+	<p>DIV</p>
+</div>
+<style>
+.popup{z-index:9;background-color:#f1f1f1;border:1px solid #d3d3d3;text-align:center;min-height:150px;min-width:300px;max-height:300px;max-width:600px;}
+/*Drgable */
+.popup{position:absolute;/*resize:both;!*enable this to css resize*! */
+ overflow:auto;}
+.popup-header{padding:10px;cursor:move;z-index:10;background-color:#2196f3;color:#fff;}
+/*Resizeable*/
+.popup .resizer-right{width:5px;height:100%;background:transparent;position:absolute;right:0;bottom:0;cursor:e-resize;}
+.popup .resizer-bottom{width:100%;height:5px;background:transparent;position:absolute;right:0;bottom:0;cursor:n-resize;}
+.popup .resizer-both{width:5px;height:5px;background:transparent;z-index:10;position:absolute;right:0;bottom:0;cursor:nw-resize;}
+/*NOSELECT*/
+.popup *{-webkit-touch-callout:none;/* iOS Safari */
+ -webkit-user-select:none;/* Safari */
+ -khtml-user-select:none;/* Konqueror HTML */
+ -moz-user-select:none;/* Firefox */
+ -ms-user-select:none;/* Internet Explorer/Edge */
+ user-select:none;/* Non-prefixed version,currently supported by Chrome and Opera */
+}
+</style>
+<script>
+	window.onload = function () {
+		initDragElement();
+		initResizeElement();
+	};
+
+	function initDragElement() {
+		var pos1 = 0,
+			pos2 = 0,
+			pos3 = 0,
+			pos4 = 0;
+		var popups = document.getElementsByClassName("popup");
+		var elmnt = null;
+		var currentZIndex = 100; //TODO reset z index when a threshold is passed
+
+		for (var i = 0; i < popups.length; i++) {
+			var popup = popups[i];
+			var header = getHeader(popup);
+
+			popup.onmousedown = function () {
+				this.style.zIndex = "" + ++currentZIndex;
+			};
+
+			if (header) {
+				header.parentPopup = popup;
+				header.onmousedown = dragMouseDown;
+			}
+		}
+
+		function dragMouseDown(e) {
+			elmnt = this.parentPopup;
+			elmnt.style.zIndex = "" + ++currentZIndex;
+
+			e = e || window.event;
+			// get the mouse cursor position at startup:
+			pos3 = e.clientX;
+			pos4 = e.clientY;
+			document.onmouseup = closeDragElement;
+			// call a function whenever the cursor moves:
+			document.onmousemove = elementDrag;
+		}
+
+		function elementDrag(e) {
+			if (!elmnt) {
+				return;
+			}
+
+			e = e || window.event;
+			// calculate the new cursor position:
+			pos1 = pos3 - e.clientX;
+			pos2 = pos4 - e.clientY;
+			pos3 = e.clientX;
+			pos4 = e.clientY;
+			// set the element's new position:
+			elmnt.style.top = elmnt.offsetTop - pos2 + "px";
+			elmnt.style.left = elmnt.offsetLeft - pos1 + "px";
+		}
+
+		function closeDragElement() {
+			/* stop moving when mouse button is released:*/
+			document.onmouseup = null;
+			document.onmousemove = null;
+		}
+
+		function getHeader(element) {
+			var headerItems = element.getElementsByClassName("popup-header");
+
+			if (headerItems.length === 1) {
+				return headerItems[0];
+			}
+
+			return null;
+		}
+	}
+
+	function initResizeElement() {
+		var popups = document.getElementsByClassName("popup");
+		var element = null;
+		var startX, startY, startWidth, startHeight;
+
+		for (var i = 0; i < popups.length; i++) {
+			var p = popups[i];
+
+			var right = document.createElement("div");
+			right.className = "resizer-right";
+			p.appendChild(right);
+			right.addEventListener("mousedown", initDrag, false);
+			right.parentPopup = p;
+
+			var bottom = document.createElement("div");
+			bottom.className = "resizer-bottom";
+			p.appendChild(bottom);
+			bottom.addEventListener("mousedown", initDrag, false);
+			bottom.parentPopup = p;
+
+			var both = document.createElement("div");
+			both.className = "resizer-both";
+			p.appendChild(both);
+			both.addEventListener("mousedown", initDrag, false);
+			both.parentPopup = p;
+		}
+
+		function initDrag(e) {
+			element = this.parentPopup;
+
+			startX = e.clientX;
+			startY = e.clientY;
+			startWidth = parseInt(
+				document.defaultView.getComputedStyle(element).width,
+				10
+			);
+			startHeight = parseInt(
+				document.defaultView.getComputedStyle(element).height,
+				10
+			);
+			document.documentElement.addEventListener("mousemove", doDrag, false);
+			document.documentElement.addEventListener("mouseup", stopDrag, false);
+		}
+
+		function doDrag(e) {
+			element.style.width = startWidth + e.clientX - startX + "px";
+			element.style.height = startHeight + e.clientY - startY + "px";
+		}
+
+		function stopDrag() {
+			document.documentElement.removeEventListener("mousemove", doDrag, false);
+			document.documentElement.removeEventListener("mouseup", stopDrag, false);
+		}
+	}
+
+</script> -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
